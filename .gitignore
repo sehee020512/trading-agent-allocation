@@ -1,0 +1,16 @@
+# API Keys (매우 중요!)
+OPENAI_API_KEY.txt
+.env
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# 가상환경 및 패키지
+.venv/
+requirements.txt  # Poetry를 쓰신다면 이건 지워도 되지만 일단 넣어둡니다.
+
+# 데이터 및 로그
+data/
+*.jsonl
+.position.lock
