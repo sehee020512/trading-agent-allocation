@@ -1,9 +1,9 @@
-gym-trading-env
-openai
-openai-agents
 pandas
 python-dateutil
 numpy
 yfinance
 feedparser
 langchain
+langchain_experimental
+langchain_openai
+langchain_deepseek
