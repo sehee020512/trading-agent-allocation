@@ -1,7 +1,7 @@
 from langchain.agents import create_agent
 from pydantic import BaseModel, Field
 
-model = "gpt-5-mini"
+model = "deepseek:deepseek-chat"
 
 initial_strategy = """
 - **Signal Combination**: Treat price momentum (20d/60d returns) as the primary signal. Use news sentiment to corroborate direction or flag risk. Use volatility (from code_interpreter) to scale position size — higher volatility means smaller position, not necessarily a different direction.

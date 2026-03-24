@@ -55,14 +55,14 @@ class LogManager:
             existing.append(f"{base}_run{run}.json")
             run += 1
 
-        load_filename = existing[-1] if existing else None
-        save_filename = f"{base}_run{run}.json"
-
         if existing:
-            print(f"[LogManager] Existing runs found: run1~run{run - 1}. "
-                  f"Saving to: {save_filename}")
+            load_filename = existing[-1]
+            save_filename = existing[-1]
+            print(f"[LogManager] Resuming existing file: {save_filename}")
         else:
-            print(f"[LogManager] No existing runs. Saving to: {save_filename}")
+            load_filename = None
+            save_filename = f"{base}_run{run}.json"
+            print(f"[LogManager] No existing file. Saving to: {save_filename}")
 
         return load_filename, save_filename
 

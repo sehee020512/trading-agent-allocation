@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from agents.prompting_agent import agent_summarizing
+from langchain_core.messages import HumanMessage
 
 LOG_DIR = Path("trading_log/2025-04")
 
@@ -23,7 +24,7 @@ message = json.dumps(
 )
 
 # Invoke agent
-response = agent_summarizing.invoke(input={"messages": [{"role": "user", "content": message}]})
+response = agent_summarizing.invoke(input={"messages": [HumanMessage(content=message)]})
 result = response["messages"][-1].content
 
 print(result)

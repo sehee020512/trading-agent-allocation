@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from utils.simulator import TradingSimulator
 from agents.trading_agents import StrategyPortfolioAllocation
 from agents.prompting_agent import initial_prompt
+from langchain_core.messages import HumanMessage
 
 
 class StrategySimulator(TradingSimulator):
@@ -121,7 +122,7 @@ class StrategySimulator(TradingSimulator):
             user_message += f"\n- Daily Return: {prev_return:.2f}%"
             user_message += f"\n- Allocations: {prev_allocations}"
 
-        input_msg = {"messages": [{"role": "user", "content": user_message}]}
+        input_msg = {"messages": [HumanMessage(content=user_message)]}
         response = self.trading_agent.invoke(input=input_msg)
         response_content = response["messages"][-1].content
         print(response_content)

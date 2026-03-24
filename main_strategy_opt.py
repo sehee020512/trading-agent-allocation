@@ -10,6 +10,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 _PROJECT_ROOT = Path(__file__).parent
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from pathlib import Path
 
 from utils.account import StockAccount
@@ -162,7 +163,7 @@ async def run_strategy_simulation(simulator: StrategySimulator, prompting_agent,
                     prompting_message += f"\n\nCurrent Trading Strategy:\n"
                     prompting_message += simulator.current_strategy if simulator.current_strategy else initial_strategy
 
-                    prompting_input = {"messages": [{"role": "user", "content": prompting_message}]}
+                    prompting_input = {"messages": [HumanMessage(content=prompting_message)]}
                     prompting_response = prompting_agent.invoke(input=prompting_input)
                     print(f"✅ Strategy optimizer completed\n")
 

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from agents.prompting_agent import initial_prompt
 from utils.metric import compute_metrics
+from langchain_core.messages import HumanMessage
 
 def _build_accumulated_results(simulator):
     """마지막 prompting 이후의 trading log를 결과 리스트로 변환 (resume 지원)."""
@@ -142,6 +143,10 @@ async def run_simulation(simulator, prompting_agent, start_date, end_date,
             prompting_needed = len(accumulated_results) >= prompting_interval
 
             if trading_already_done:
+                if prompting_needed and len(simulator.trading_log) == 1:
+                    print(f"\n⏭️  First trading day — skipping optimization (no prior result to evaluate)")
+                    current += timedelta(days=1)
+                    continue
                 if prompting_needed:
                     print(f"🔄 Trading completed for {date_str}, retrying prompting ({len(accumulated_results)} days accumulated)")
                 else:
@@ -191,7 +196,7 @@ async def run_simulation(simulator, prompting_agent, start_date, end_date,
                 try:
                     prompting_message = _build_prompting_message(accumulated_results, simulator, memory_file)
                     print(f"📨 [Prompting Agent Input]\n{prompting_message}\n")
-                    prompting_input = {"messages": [{"role": "user", "content": prompting_message}]}
+                    prompting_input = {"messages": [HumanMessage(content=prompting_message)]}
                     prompting_response = prompting_agent.invoke(input=prompting_input)
 
                     # structured_output이 있으면 직접 사용 (일부 모델), 없으면 content에서 JSON 파싱
@@ -201,10 +206,20 @@ async def run_simulation(simulator, prompting_agent, start_date, end_date,
                         reasoning = structured.reasoning
                         optimized_tool_policy = structured.tool_policy
                     else:
+                        import re
                         response_content = prompting_response["messages"][-1].content
-                        parsed_response = json.loads(response_content)
+                        json_start = response_content.index("{")
+                        json_end = response_content.rindex("}") + 1
+                        json_str = re.sub(r',\s*([}\]])', r'\1', response_content[json_start:json_end])
+                        parsed_response = json.loads(json_str)
                         reasoning = parsed_response.get("reasoning", "")
-                        optimized_tool_policy = parsed_response["tool_policy"]
+                        tool_policy_raw = parsed_response["tool_policy"]
+                        if isinstance(tool_policy_raw, dict):
+                            optimized_tool_policy = "\n".join(
+                                f"- **{k}**: {v}" for k, v in tool_policy_raw.items()
+                            )
+                        else:
+                            optimized_tool_policy = tool_policy_raw
 
                     print(f"💡 Prompting Agent Reasoning:\n{reasoning}\n")
                     print(f"📋 Updated Tool Usage Policy:\n{optimized_tool_policy}\n")

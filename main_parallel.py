@@ -68,22 +68,22 @@ def main():
         # Simulation
         "num_runs":           3,
         "prompting_interval": 1,
-        "memory_file":        "trading_log/2025-08/memory.txt",  # e.g. "trading_log/meta_prompt.txt" — meta-prompt를 매 prompting마다 주입
-        "log_dir":            "trading_log/2025-08_overfitting",
+        "memory_file":        None,  # e.g. "trading_log/meta_prompt.txt" — meta-prompt를 매 prompting마다 주입
+        "log_dir":            "trading_log/deepseek",
         "initial_cash":       10_000,
-        "start_date":         "2025-08-01",
-        "end_date":           "2025-08-31",
+        "start_date":         "2025-01-01",
+        "end_date":           "2025-01-31",
         "tickers":            ["AAPL", "MSFT", "NVDA", "JPM", "V", "JNJ", "UNH",
                                "PG", "KO", "XOM", "CAT", "WMT", "META", "TSLA", "AMZN"],
         # Trading agent
-        "trading_model":      "gpt-5-mini",
+        "trading_model":      "deepseek:deepseek-chat",
         "trading_prompt":     _base_instruction,
         # Prompting agent
-        "prompting_model":    "gpt-5-mini",
+        "prompting_model":    "deepseek:deepseek-chat",
         "prompting_prompt":   prompting_instruction_basic,
     }
     ###
-
+    
     # ── Configuration 저장 ─────────────────────────────────────────────────────
     import os
     os.makedirs(cfg["log_dir"], exist_ok=True)

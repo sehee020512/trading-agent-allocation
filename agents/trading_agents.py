@@ -5,6 +5,9 @@ from pathlib import Path
 
 from .tools import get_price, news_searcher, code_interpreter
 
+
+model = "deepseek:deepseek-chat"
+
 ### Instructions ####
 INSTRUCTIONS_DIR = Path(__file__).parent / "instructions"
 
@@ -44,6 +47,7 @@ class StrategyPortfolioAllocation(BaseModel):
         return v
 
 class PortfolioAllocation(BaseModel):
+    analysis: str = Field(default="", description="Brief analysis summary before the allocation")
     traceability: Dict[str, ToolUseTrace] = Field(
         description="Detailed trace of tool usage and logic for each asset"
     )
@@ -65,8 +69,6 @@ class PortfolioAllocation(BaseModel):
         return v
 
 ### Create Agent ###
-model = "gpt-5-mini"
-
 agent_base = create_agent(
     model = model,
     tools = [get_price,
@@ -74,7 +76,7 @@ agent_base = create_agent(
              code_interpreter,
              ],
     system_prompt = base_instruction,
-    response_format = PortfolioAllocation
+    # response_format = PortfolioAllocation
 )
 
 agent_baseline = create_agent(

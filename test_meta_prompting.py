@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from agents.prompting_agent import agent_memorizing
+from langchain_core.messages import HumanMessage
 
 MEMORY_PATH = Path("trading_log/2025-04/memory.txt")
 LOG_DIRS = [
@@ -51,7 +52,7 @@ for log_dir in LOG_DIRS:
     message = f"{previous_memory_section}{summary}{metrics_text}"
 
     print(f"Processing {log_dir.name}...")
-    response = agent_memorizing.invoke({"messages": [{"role": "user", "content": message}]})
+    response = agent_memorizing.invoke({"messages": [HumanMessage(content=message)]})
     previous_memory = response["messages"][-1].content
     print(f"Done: {log_dir.name}")
 

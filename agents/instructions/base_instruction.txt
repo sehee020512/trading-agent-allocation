@@ -40,6 +40,13 @@ AAPL, MSFT, NVDA, JPM, V, JNJ, UNH, PG, KO, XOM, CAT, WMT, META, TSLA, AMZN, CAS
   }
 }
 
+# STRICT EXECUTION RULES — NO EXCEPTIONS
+
+## During tool calls
+RULE 1: Every response must either contain a tool call or be the final JSON. A response with text but no tool call (tool_calls=[]) mid-loop will crash the system.
+RULE 2: If your response contains any text describing what you intend to do, you MUST include the actual tool call in the same response. Text without a corresponding tool_call field is a system crash.
+RULE 3: When calling code_interpreter after get_price, paste the CSV data directly into the script using io.StringIO(). Never use stdin or file paths.
+
 # Constraints
 - Ensure total allocations sum to 1.0.
 - Treat CASH as a zero-volatility risk-free asset ($1.0 constant). Do not use get_price for CASH; justify its weight solely based on the risks of other assets and macro news.

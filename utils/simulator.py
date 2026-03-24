@@ -2,8 +2,9 @@ import json
 from datetime import datetime, timedelta
 import pandas as pd
 import yfinance as yf
-from agents.trading_agents import PortfolioAllocation
+
 from utils.log_manager import LogManager
+from langchain_core.messages import HumanMessage
 
 class TradingSimulator:
     def __init__(self, trading_agent, account, tickers, agent_name="default", log_dir="trading_log"):
@@ -39,7 +40,10 @@ class TradingSimulator:
             if tool_policy_history:
                 self.tool_policy_history = tool_policy_history
                 # Restore the last tool policy
-                self.current_tool_policy = self.tool_policy_history[-1]["policy"]
+                last_policy = self.tool_policy_history[-1]["policy"]
+                if isinstance(last_policy, dict):
+                    last_policy = "\n".join(f"- **{k}**: {v}" for k, v in last_policy.items())
+                self.current_tool_policy = last_policy
 
         return success
 
@@ -149,7 +153,7 @@ class TradingSimulator:
 
         # Execute trading agent (astream: 툴 하나 완료될 때마다 실시간 출력)
         print(f"📨 [Trading Agent Input]\n{user_message}\n")
-        input_msg = {"messages": [{"role": "user", "content": user_message}]}
+        input_msg = {"messages": [HumanMessage(content=user_message)]}
         # stream_mode="values": 노드 완료마다 누적 state 전달 → 마지막 청크 = 최종 state
         response = None
         prev_msg_count = 0
@@ -174,24 +178,49 @@ class TradingSimulator:
             print(f"  [{i}] {type(msg).__name__} | content={repr(msg.content)[:100]} | tool_calls={tc}")
         print("[DEBUG] === End messages ===\n")
 
-        # structured_output 키 → tool call args → content JSON 순으로 파싱
-        structured = response.get("structured_output")
-        if isinstance(structured, PortfolioAllocation):
-            portfolio_allocation = structured
-        else:
-            portfolio_allocation = None
-            for msg in reversed(response.get("messages", [])):
-                if hasattr(msg, "tool_calls") and msg.tool_calls:
-                    for tc in msg.tool_calls:
-                        if tc["name"] == PortfolioAllocation.__name__:
-                            portfolio_allocation = PortfolioAllocation(**tc["args"])
-                            break
-                if portfolio_allocation:
-                    break
-            if portfolio_allocation is None:
-                portfolio_allocation = PortfolioAllocation(**json.loads(response["messages"][-1].content))
-        print(f"🤖 [Trading Agent Output]\n{portfolio_allocation.model_dump_json(indent=2)}\n")
-        traceability = {k: {"process": v.process, "reasoning": v.reasoning} for k, v in portfolio_allocation.traceability.items()}
+        # 마지막 메시지 content에서 JSON 추출
+        max_retries = 3
+        traceability = None
+        stock_allocations = None
+
+        for attempt in range(max_retries):
+            if attempt > 0:
+                print(f"\n🔄 [Run {attempt + 1}] 재시도...")
+                response = None
+                prev_msg_count = 0
+                async for state in self.trading_agent.astream(input_msg, stream_mode="values"):
+                    response = state
+                    new_msgs = state.get("messages", [])[prev_msg_count:]
+                    prev_msg_count = len(state.get("messages", []))
+                    for msg in new_msgs:
+                        if hasattr(msg, "tool_calls") and msg.tool_calls:
+                            for tc in msg.tool_calls:
+                                print(f"🔧 Tool call: {tc['name']}  args={tc['args']}", flush=True)
+                        elif hasattr(msg, "tool_call_id") and msg.tool_call_id:
+                            preview = str(msg.content)[:300]
+                            print(f"📊 Tool result: {preview}{'...' if len(str(msg.content)) > 300 else ''}", flush=True)
+                        elif msg.content:
+                            print(f"💬 {msg.content}", flush=True)
+
+            try:
+                import re
+                last_content = response["messages"][-1].content
+                json_start = last_content.index("{")
+                json_end = last_content.rindex("}") + 1
+                json_str = last_content[json_start:json_end]
+                json_str = re.sub(r',\s*([}\]])', r'\1', json_str)  # trailing comma 제거
+                parsed = json.loads(json_str)
+                traceability = {
+                    k: {"process": v.get("process", ""), "reasoning": v.get("reasoning", "")}
+                    for k, v in parsed["traceability"].items()
+                }
+                stock_allocations = parsed["allocations"]
+                print(f"🤖 [Trading Agent Output]\n{json.dumps(parsed, indent=2)}\n")
+                break
+            except Exception as e:
+                print(f"⚠️ [Run {attempt + 1}] 파싱 실패: {e}")
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"Trading agent output 파싱 {max_retries}회 실패") from e
 
         # Tool call 로그 추출
         tool_call_log = []
@@ -203,7 +232,6 @@ class TradingSimulator:
                 if tool_call_log and "result" not in tool_call_log[-1]:
                     tool_call_log[-1]["result"] = msg.content
 
-        stock_allocations = portfolio_allocation.allocations
 
         # Apply allocation and calculate daily return
         cur_equity = self.account.apply_allocation(stock_allocations)

@@ -1,7 +1,8 @@
 from langchain.agents import create_agent
 from pydantic import BaseModel, Field
 
-model = "gpt-5-mini"
+model = "deepseek:deepseek-chat"
+model_gpt_5 = "gpt-5"
 
 prompting_instruction_basic = """
 # Role and Objective
@@ -76,7 +77,7 @@ class PromptUpdate(BaseModel):
 agent_prompting = create_agent(
     model = model,
     system_prompt = prompting_instruction_basic,
-    response_format = PromptUpdate
+    # response_format = PromptUpdate
 )
 
 summarizing_instruction = """
@@ -171,7 +172,7 @@ Repeat this block for Run 1, Run 2, and Run 3.
 """
 
 agent_summarizing = create_agent(
-   model = "gpt-5",
+   model = model_gpt_5,
    system_prompt = summarizing_instruction,
 )
 
@@ -272,6 +273,6 @@ The regime ID must reflect *how returns were generated or destroyed*, not what t
 """
 
 agent_memorizing = create_agent(
-   model = "gpt-5",
+   model = model_gpt_5,
    system_prompt = memorizing_instruction,
 )
